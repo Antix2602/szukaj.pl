@@ -1,0 +1,2 @@
+# szukaj.pl
+strona

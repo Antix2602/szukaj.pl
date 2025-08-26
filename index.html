@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>szukaj.pl</title>
+<style>
+  body { margin:0; font-family:Arial,sans-serif; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; min-height:100vh; transition:all 0.3s ease; padding-top:50px; }
+  body.dark { background:#000; color:#fff; }
+  body.light { background:#fff; color:#000; }
+  .toggle { position:absolute; top:15px; right:20px; cursor:pointer; padding:8px 12px; border-radius:20px; border:1px solid #888; font-size:14px; background:transparent; color:inherit; transition:all 0.3s ease; }
+  .logo { font-size:64px; font-weight:bold; margin-bottom:20px; cursor:pointer; text-align:center; }
+  .searchbox { display:flex; width:500px; max-width:90%; border-radius:24px; padding:10px 15px; border:1px solid; transition:all 0.3s ease; margin-bottom:20px; }
+  body.dark .searchbox { background:#111; border-color:#555; }
+  body.light .searchbox { background:#f9f9f9; border-color:#ccc; }
+  .searchbox input { flex:1; border:none; font-size:18px; padding:10px; outline:none; background:transparent; color:inherit; }
+  .searchbox button { border:none; padding:10px 20px; margin-left:5px; border-radius:4px; cursor:pointer; font-weight:bold; transition:all 0.3s ease; }
+  body.dark .searchbox button { background:#fff; color:#000; }
+  body.light .searchbox button { background:#000; color:#fff; }
+  .searchbox button:hover { opacity:0.8; }
+  .results { margin-top:10px; width:600px; max-width:90%; display:flex; flex-direction:column; gap:15px; }
+  .result { padding:15px; border-radius:8px; border:1px solid; opacity:0; transform:translateY(10px); animation: fadeIn 0.5s forwards; }
+  body.dark .result { background:#111; border-color:#333; }
+  body.light .result { background:#fafafa; border-color:#ddd; }
+  .result a { text-decoration:none; font-weight:bold; font-size:18px; color:inherit; }
+  .result p { margin:5px 0 0; font-size:14px; opacity:0.8; }
+  @keyframes fadeIn { to { opacity:1; transform:translateY(0); } }
+  .footer { position:fixed; bottom:10px; font-size:12px; opacity:0.6; text-align:center; width:100%; }
+  @media (max-width:600px) {
+    .logo { font-size:40px; margin-bottom:15px; }
+    .searchbox { width:90%; padding:8px; }
+    .searchbox input { font-size:16px; padding:8px; }
+    .searchbox button { padding:8px 12px; font-size:14px; }
+    .results { width:95%; }
+    .footer { font-size:10px; bottom:5px; }
+  }
+</style>
+</head>
+<body class="dark">
+<button class="toggle" id="toggleBtn">☀️</button>
+<div class="logo" id="logo">szukaj.pl</div>
+<form id="searchForm" class="searchbox">
+  <input type="search" id="query" placeholder="Wpisz zapytanie...">
+  <button type="submit">Szukaj</button>
+</form>
+<div class="results" id="results"></div>
+<div class="footer">Ta wyszukiwarka korzysta z DuckDuckGo API</div>
+<script>
+const form = document.getElementById('searchForm');
+const input = document.getElementById('query');
+const resultsDiv = document.getElementById('results');
+const toggleBtn = document.getElementById('toggleBtn');
+const logo = document.getElementById('logo');
+toggleBtn.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  document.body.classList.toggle('light');
+  toggleBtn.textContent = document.body.classList.contains('dark') ? '☀️' : '🌙';
+});
+logo.addEventListener('click', () => { input.value=''; resultsDiv.innerHTML=''; });
+function extractUrl(duckUrl){ const match = duckUrl.match(/uddg=([^&]+)/); if(match) return decodeURIComponent(match[1]); return duckUrl; }
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const query = input.value.trim();
+  if(!query) return;
+  resultsDiv.innerHTML = '<p style="text-align:center;">Ładowanie...</p>';
+  try {
+    const resp = await fetch(`https://cors-anywhere.herokuapp.com/https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`, {headers:{'X-Requested-With':'XMLHttpRequest'}});
+    if(!resp.ok) throw new Error('Błąd sieci');
+    const html = await resp.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html,'text/html');
+    const results = Array.from(doc.querySelectorAll('a.result__a'));
+    resultsDiv.innerHTML='';
+    if(results.length===0){ resultsDiv.innerHTML='<p style="text-align:center;">Brak wyników</p>'; return; }
+    results.slice(0,10).forEach((link,i)=>{
+      const title = link.textContent;
+      const url = extractUrl(link.href);
+      const snippetEl = link.closest('div').querySelector('a+div, .result__snippet') || null;
+      const snippet = snippetEl ? snippetEl.textContent : '';
+      const div = document.createElement('div');
+      div.className='result';
+      div.style.animationDelay=`${i*0.1}s`;
+      div.innerHTML=`<a href="${url}" target="_blank">${title}</a><p>${snippet}</p>`;
+      resultsDiv.appendChild(div);
+    });
+  } catch(err){
+    console.error(err);
+    resultsDiv.innerHTML='<p style="text-align:center;">Błąd pobierania wyników</p>';
+  }
+});
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
